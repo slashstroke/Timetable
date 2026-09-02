@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1 CSE-B Planner</title>
+<style>
+  :root{
+    --ink:#242424; --muted:#8a8a8a; --line:#e6e3dc; --paper:#fbfaf7;
+    --card:#ffffff; --accent:#2b4c5c;
+    --r-bg:#fbe4e1; --r-tx:#a8422f;
+    --a-bg:#fbefd9; --a-tx:#8f6112;
+    --b-bg:#e2ebf7; --b-tx:#2a5c86;
+    --g-bg:#e3f0e4; --g-tx:#3a7550;
+    --p-bg:#efe6f5; --p-tx:#764f92;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:460px;margin:0 auto;padding:18px 18px 32px;}
+  header h1{
+    font-family:Georgia,"Times New Roman",serif; font-size:20px; font-weight:700;
+    margin:0 0 2px;
+  }
+  header p{
+    font-family:Georgia,serif; font-style:italic; color:var(--accent);
+    font-size:12px; margin:0 0 14px;
+  }
+
+  @media (min-width: 820px){
+    .wrap{max-width:760px;}
+    header h1{font-size:24px;}
+    header p{font-size:13.5px;}
+    .chip{font-size:12px;padding:5px 11px 5px 8px;}
+    .day{font-size:14px;border-radius:10px;}
+    .grid{gap:6px;}
+    .weekday-row span{font-size:11.5px;}
+    .nav .label{font-size:19px;}
+    td{height:72px;}
+    .cell .time{font-size:9.5px;}
+    .cell .subj{font-size:11.5px;}
+  }
+
+  /* switcher */
+  .switcher{
+    display:flex; gap:3px; background:var(--line); padding:3px;
+    border-radius:999px; margin-bottom:16px;
+  }
+  .switchBtn{
+    flex:1; border:none; background:transparent; padding:8px 0;
+    border-radius:999px; font-size:13px; font-weight:600; color:var(--muted);
+    cursor:pointer; transition:background .2s ease, color .2s ease;
+    font-family:inherit;
+  }
+  .switchBtn.active{background:var(--card); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+  /* shared */
+  .legend{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+  .legend::-webkit-scrollbar{display:none;}
+  .chip{
+    display:flex;align-items:center;gap:5px;padding:4px 9px 4px 7px;
+    border-radius:999px;border:1px solid var(--line);background:var(--card);
+    font-size:11px;color:var(--ink);white-space:nowrap;flex:none;
+    cursor:pointer;user-select:none;transition:opacity .2s ease, transform .15s ease;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;flex:none;}
+  .chip.off{opacity:.35;}
+  .chip:active{transform:scale(0.96);}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.04); overflow:hidden;
+    touch-action:pan-y;
+  }
+
+  .detail{
+    margin-top:12px; border-top:1px dashed var(--line); padding-top:10px;
+    max-height:0; overflow:hidden; transition:max-height .28s ease, opacity .2s ease;
+    opacity:0;
+  }
+  .detail.open{max-height:120px; opacity:1;}
+  .detail .d-when, .detail .d-date{font-family:Georgia,serif;font-style:italic;color:var(--accent);font-size:12px;margin:0 0 4px;}
+  .detail .d-label, .detail .d-subj{font-size:14.5px;font-weight:600;line-height:1.4;margin:0;}
+  .detail .d-fac{font-size:12px;color:var(--muted);margin:2px 0 0;}
+
+  /* ---- calendar view ---- */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 12px; border-bottom:1px solid var(--line);
+  }
+  .nav button{
+    width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+    background:var(--paper);font-size:15px;color:var(--accent);cursor:pointer;
+    transition:background .15s ease;
+  }
+  .nav button:active{background:var(--line);}
+  .nav button:disabled{opacity:.25;}
+  .nav .label{font-family:Georgia,serif;font-size:16.5px;font-weight:700;}
+  .nav .label em{font-style:italic;color:var(--muted);font-weight:400;font-size:13px;}
+
+  .gridBody{padding:12px 12px 14px;}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:7px;}
+  .weekday-row span{text-align:center;font-size:10.5px;color:var(--muted);letter-spacing:.02em;}
+  .gridWrap{transition:transform .24s ease, opacity .24s ease;}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+
+  .toggleBtn{
+    display:flex; align-items:center; justify-content:center;
+    width:100%; margin-top:8px; padding:6px 0; border:none; background:none;
+    cursor:pointer; color:var(--muted);
+  }
+  .toggleBtn svg{transition:transform .25s ease;}
+  .toggleBtn.open svg{transform:rotate(180deg);}
+
+  .notes{
+    max-height:0; opacity:0; overflow:hidden;
+    padding:0 2px; font-size:12.5px; line-height:1.7;
+    color:#555; transition:max-height .28s ease, opacity .22s ease;
+  }
+  .notes.open{max-height:260px; opacity:1;}
+  .day{
+    aspect-ratio:1;border-radius:8px;display:flex;align-items:flex-start;
+    justify-content:flex-start;padding:5px 0 0 6px;font-size:12.5px;
+    background:var(--paper);color:var(--ink);position:relative;cursor:pointer;
+    border:1.5px solid transparent; transition:transform .12s ease;
+  }
+  .day.empty{visibility:hidden;cursor:default;}
+  .day.selected{transform:scale(0.94);}
+  .day.today{box-shadow:inset 0 0 0 1.5px var(--accent); font-weight:700;}
+  .day.major{border-color:currentColor;}
+  .day.vac{box-shadow:inset 0 0 0 1px currentColor;}
+  .day.dim{opacity:.28;}
+
+  /* ---- timetable view ---- */
+  .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table{border-collapse:collapse; table-layout:fixed; width:100%; min-width:678px;}
+  th, td{border:1px solid var(--line); padding:0; overflow:hidden;}
+  th.daycol, td.daycol{
+    position:sticky; left:0; background:var(--card); z-index:2;
+  }
+  th{
+    font-family:Georgia,serif; font-size:11px; font-weight:700; color:var(--muted);
+    padding:8px 4px; background:var(--card);
+  }
+  td{height:64px; vertical-align:top;}
+  td.daycol{
+    font-family:Georgia,serif; font-weight:700; font-size:12px;
+    text-align:center; vertical-align:middle; background:#fafaf7;
+  }
+  .cell{
+    height:100%; padding:5px 6px; cursor:pointer; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+  }
+  .cell.lunch{
+    align-items:center; justify-content:center; color:var(--muted);
+    font-style:italic; font-size:10px; cursor:default;
+  }
+  .cell .time{font-size:8.5px; color:var(--muted); font-style:italic; margin-bottom:2px;}
+  .cell .subj{font-size:10.5px; font-weight:600; line-height:1.15;}
+  .cell.selected{outline:2px solid var(--accent); outline-offset:-2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>S1 CSE-B Planner</h1>
+    <p>2026&ndash;27 Odd Semester &middot; Jyothi Engineering College</p>
+  </header>
+
+  <div class="switcher">
+    <button class="switchBtn active" data-target="calendarView">Calendar</button>
+    <button class="switchBtn" data-target="timetableView">Timetable</button>
+  </div>
+
+  <!-- ================= CALENDAR VIEW ================= -->
+  <div id="calendarView">
+    <div class="legend" id="cal-legend"></div>
+
+    <div class="card" id="cal-card">
+      <div class="nav">
+        <button id="cal-prev" aria-label="Previous month">&#8249;</button>
+        <div class="label" id="cal-monthLabel"></div>
+        <button id="cal-next" aria-label="Next month">&#8250;</button>
+      </div>
+      <div class="gridBody">
+        <div class="weekday-row">
+          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+        </div>
+        <div class="gridWrap" id="cal-gridWrap">
+          <div class="grid" id="cal-grid"></div>
+          <div class="detail" id="cal-detail">
+            <p class="d-date" id="cal-dDate"></p>
+            <p class="d-label" id="cal-dLabel"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="toggleBtn" id="cal-toggleNotes" aria-label="Show details">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+    <div class="notes" id="cal-notes"></div>
+  </div>
+
+  <!-- ================= TIMETABLE VIEW ================= -->
+  <div id="timetableView" style="display:none">
+    <div class="legend" id="tt-legend"></div>
+
+    <div class="card">
+      <div class="scroll">
+        <table id="tt-table"></table>
+      </div>
+    </div>
+
+    <div class="detail" id="tt-detail">
+      <p class="d-when" id="tt-dWhen"></p>
+      <p class="d-subj" id="tt-dSubj"></p>
+      <p class="d-fac" id="tt-dFac"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- view switcher ----
+(function(){
+  const btns = document.querySelectorAll('.switchBtn');
+  btns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('calendarView').style.display = btn.dataset.target==='calendarView' ? '' : 'none';
+      document.getElementById('timetableView').style.display = btn.dataset.target==='timetableView' ? '' : 'none';
+    });
+  });
+})();
+</script>
+
+<script>
+// ================= CALENDAR LOGIC =================
+(function(){
+const CATS = {
+  R:{bg:'var(--r-bg)',tx:'var(--r-tx)',name:'Exams'},
+  A:{bg:'var(--a-bg)',tx:'var(--a-tx)',name:'Institutional'},
+  B:{bg:'var(--b-bg)',tx:'var(--b-tx)',name:'Deadlines'},
+  G:{bg:'var(--g-bg)',tx:'var(--g-tx)',name:'Holidays'},
+  P:{bg:'var(--p-bg)',tx:'var(--p-tx)',name:'Events'},
+};
+
+function range(a,b){const r=[];for(let i=a;i<=b;i++)r.push(i);return r;}
+
+const MONTHS = [
+  {name:'July', year:2026, start:3, days:31, events:{
+    3:{cat:'G',label:'St Thomas Day'},
+    11:{cat:'G',label:'Second Saturday'},
+    29:{cat:'P',label:'Induction Ceremony'},
+    30:{cat:'B',label:'S1 B.Tech Orientation Programme begins'},
+  }},
+  {name:'August', year:2026, start:6, days:31, events:Object.assign(
+    {1:{cat:'G',label:'Holiday'},
+     7:{cat:'B',label:'Orientation Programme ends'},
+     8:{cat:'G',label:'Second Saturday, Graduation Day'},
+     10:{cat:'B',major:true,label:'Regular classes commence'},
+     12:{cat:'G',label:'Karkidaka Vavu'},
+     15:{cat:'G',label:'Independence Day'},
+     17:{cat:'B',label:'Semester enrollment begins'},
+     21:{cat:'P',label:'Onam Celebration'},
+     31:{cat:'B',label:'College reopens, semester enrollment ends'}},
+    Object.fromEntries(range(22,30).map(d=>[d,{cat:'G',vac:true,label:'Onam Vacation'}]))
+  )},
+  {name:'September', year:2026, start:2, days:30, events:Object.assign(
+    {3:{cat:'B',label:'Course selection & mapping begins'},
+     4:{cat:'G',label:'Sreekrishna Jayanthi'},
+     9:{cat:'B',label:'Course selection & mapping ends'},
+     12:{cat:'G',label:'Second Saturday'},
+     17:{cat:'A',label:'Last date: first class/advisory/course committee meeting'},
+     19:{cat:'P',label:'Arts Day'},
+     21:{cat:'G',label:'Sree Narayana Guru Samadhi'},
+     23:{cat:'B',label:'Assignment 1 due (first ABA)'},
+     24:{cat:'B',label:'Exam registration opens'},
+     25:{cat:'A',label:'Last date: first CLAC (M.Tech) meeting'},
+     26:{cat:'P',label:'Astra Jyothi 2026'}},
+    Object.fromEntries(range(28,30).map(d=>[d,{cat:'R',label:'First Internal Exam'}]))
+  )},
+  {name:'October', year:2026, start:4, days:31, events:{
+    1:{cat:'R',label:'First Internal Exam (continued)'},
+    2:{cat:'G',label:'Gandhi Jayanthi'},
+    5:{cat:'R',label:'First Internal Exam (continued)'},
+    9:{cat:'B',label:'Exam registration closes'},
+    10:{cat:'G',label:'Second Saturday'},
+    14:{cat:'A',label:'First Internal Audit by IQAC'},
+    15:{cat:'A',label:'First Internal Audit by IQAC'},
+    16:{cat:'A',label:'First Internal Audit by IQAC'},
+    20:{cat:'G',label:'Mahanavami'},
+    21:{cat:'G',label:'Vijayadashami'},
+    23:{cat:'B',label:'Assignment 2 due (second ABA)'},
+    24:{cat:'A',label:'PTA meeting'},
+    28:{cat:'A',label:'Last date: second class/advisory/CLAC committee meeting'},
+  }},
+  {name:'November', year:2026, start:0, days:30, events:Object.assign(
+    {9:{cat:'A',label:'Last date: second CLAC (M.Tech) meeting'},
+     14:{cat:'P',label:'Second Saturday, NASA 2026 Alumni Meet'},
+     18:{cat:'B',major:true,label:'Classes end, attendance & IA marks published'}},
+    Object.fromEntries(range(2,6).map(d=>[d,{cat:'R',label:'Second Internal Exam (B.Tech) & First Internal Exam (M.Tech)'}])),
+    {7:{cat:'R',label:'First Internal Exam (M.Tech), continued'}},
+    Object.fromEntries(range(11,13).map(d=>[d,{cat:'R',label:'Internal Examination \u2013 Absentees Test'}])),
+    Object.fromEntries([25,26,27,30].map(d=>[d,{cat:'A',label:'Second Internal Audit by IQAC'}]))
+  )},
+  {name:'December', year:2026, start:2, days:31, events:{
+    1:{cat:'R',major:true,label:'End Semester Examination begins'},
+  }},
+];
+
+const TODAY = {y:2026,m:2,d:1}; // September 1, 2026 (m is 0-indexed against July=0)
+
+const NOTES = {
+  July: "3 St Thomas Day \u00b7 11 Second Saturday \u00b7 29 Induction ceremony \u00b7 30 Orientation begins",
+  August: "1 Holiday \u00b7 7 Orientation ends \u00b7 8 Second Saturday, graduation day \u00b7 10 Classes commence \u00b7 12 Karkidaka Vavu \u00b7 15 Independence Day \u00b7 17 Enrollment begins \u00b7 21 Onam celebration \u00b7 22\u201330 Onam vacation \u00b7 31 College reopens, enrollment ends",
+  September: "3 Course selection opens \u00b7 4 Sreekrishna Jayanthi \u00b7 9 Course selection closes \u00b7 12 Second Saturday \u00b7 17 Committee meeting deadline \u00b7 19 Arts Day \u00b7 21 Sree Narayana Guru Samadhi \u00b7 23 Assignment 1 due \u00b7 24 Exam registration opens \u00b7 25 CLAC meeting deadline \u00b7 26 Astra Jyothi \u00b7 28\u201330 First internal exam",
+  October: "1, 5 First internal exam continues \u00b7 2 Gandhi Jayanthi \u00b7 9 Exam registration closes \u00b7 10 Second Saturday \u00b7 14\u201316 Internal audit \u00b7 20\u201321 Mahanavami, Vijayadashami \u00b7 23 Assignment 2 due \u00b7 24 PTA meeting \u00b7 28 Committee meeting deadline",
+  November: "2\u20136 Second internal exam \u00b7 2\u20137 M.Tech first internal exam \u00b7 9 CLAC meeting deadline \u00b7 11\u201313 Absentees test \u00b7 14 NASA alumni meet \u00b7 18 Classes end, IA marks published \u00b7 25\u201327, 30 Second internal audit",
+  December: "1 End semester exams begin (further dates not yet published)",
+};
+
+let activeFilters = new Set(Object.keys(CATS));
+let idx = 0;
+
+const legendEl = document.getElementById('cal-legend');
+Object.entries(CATS).forEach(([key,cat])=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.innerHTML = `<span class="dot" style="background:${cat.bg};box-shadow:inset 0 0 0 1px ${cat.tx}"></span>${cat.name}`;
+  chip.addEventListener('click',()=>{
+    if(activeFilters.has(key)){activeFilters.delete(key);chip.classList.add('off');}
+    else{activeFilters.add(key);chip.classList.remove('off');}
+    render();
+  });
+  legendEl.appendChild(chip);
+});
+
+const gridEl = document.getElementById('cal-grid');
+const labelEl = document.getElementById('cal-monthLabel');
+const detailEl = document.getElementById('cal-detail');
+const dDate = document.getElementById('cal-dDate');
+const dLabel = document.getElementById('cal-dLabel');
+const prevBtn = document.getElementById('cal-prev');
+const nextBtn = document.getElementById('cal-next');
+
+function closeDetail(){detailEl.classList.remove('open');}
+
+function render(){
+  const m = MONTHS[idx];
+  labelEl.innerHTML = `${m.name} <em>${m.year}</em>`;
+  prevBtn.disabled = idx===0;
+  nextBtn.disabled = idx===MONTHS.length-1;
+  gridEl.innerHTML='';
+  closeDetail();
+  document.getElementById('cal-notes').textContent = NOTES[m.name] || '';
+  document.getElementById('cal-notes').classList.remove('open');
+  document.getElementById('cal-toggleNotes').classList.remove('open');
+
+  const totalCells = m.start + m.days;
+  const weeks = Math.ceil(totalCells/7);
+  let day = 1;
+  for(let i=0;i<weeks*7;i++){
+    const cell = document.createElement('div');
+    if(i < m.start || day > m.days){
+      cell.className='day empty';
+      gridEl.appendChild(cell);
+      continue;
+    }
+    const ev = m.events[day];
+    cell.className='day';
+    cell.textContent = day;
+    if(ev){
+      const cat = CATS[ev.cat];
+      const dimmed = !activeFilters.has(ev.cat);
+      cell.style.background = cat.bg;
+      cell.style.color = cat.tx;
+      if(ev.major) cell.classList.add('major');
+      if(ev.vac) cell.classList.add('vac');
+      if(dimmed) cell.classList.add('dim');
+      const thisDay = day;
+      cell.addEventListener('click',()=>{
+        document.querySelectorAll('.day.selected').forEach(d=>d.classList.remove('selected'));
+        cell.classList.add('selected');
+        dDate.textContent = `${m.name} ${thisDay}, ${m.year}`;
+        dLabel.textContent = ev.label;
+        detailEl.classList.add('open');
+      });
+    }
+    if(TODAY && m.year===TODAY.y && idx===TODAY.m && day===TODAY.d){
+      cell.classList.add('today');
+    }
+    gridEl.appendChild(cell);
+    day++;
+  }
+}
+
+prevBtn.addEventListener('click',()=>{if(idx>0) goTo(idx-1,-1);});
+nextBtn.addEventListener('click',()=>{if(idx<MONTHS.length-1) goTo(idx+1,1);});
+
+document.getElementById('cal-toggleNotes').addEventListener('click',()=>{
+  document.getElementById('cal-notes').classList.toggle('open');
+  document.getElementById('cal-toggleNotes').classList.toggle('open');
+});
+
+function goTo(newIdx, direction){
+  const wrap = document.getElementById('cal-gridWrap');
+  wrap.style.transform = `translateX(${direction*-18}px)`;
+  wrap.style.opacity = '0';
+  setTimeout(()=>{
+    idx = newIdx;
+    render();
+    wrap.style.transition = 'none';
+    wrap.style.transform = `translateX(${direction*18}px)`;
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        wrap.style.transition = 'transform .24s ease, opacity .24s ease';
+        wrap.style.transform = 'translateX(0)';
+        wrap.style.opacity = '1';
+      });
+    });
+  }, 180);
+}
+
+const cardEl = document.getElementById('cal-card');
+let touchX=null;
+cardEl.addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;});
+cardEl.addEventListener('touchend',e=>{
+  if(touchX===null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if(dx>50 && idx>0) goTo(idx-1,-1);
+  else if(dx<-50 && idx<MONTHS.length-1) goTo(idx+1,1);
+  touchX=null;
+});
+
+idx = Math.min(Math.max(TODAY.m,0), MONTHS.length-1);
+render();
+})();
+</script>
+
+<script>
+// ================= TIMETABLE LOGIC =================
+(function(){
+const SUBJECTS = {
+  calc: {name:'Multivariable Calculus', short:'Calculus', color:'#2a5c86', bg:'#e2ebf7'},
+  chem: {name:'Chemistry for Engineers', short:'Chemistry', color:'#3a7550', bg:'#e3f0e4'},
+  prog: {name:'Programming in C', short:'Prog. C', color:'#8f6112', bg:'#fbefd9'},
+  cad:  {name:'Engineering Graphics & CAD', short:'CAD', color:'#764f92', bg:'#efe6f5'},
+  eee:  {name:'Fundamentals of EEE', short:'EEE', color:'#a8422f', bg:'#fbe4e1'},
+  life: {name:'Life Skills & Professional Communication', short:'Life Skills', color:'#2f7a6e', bg:'#dcf3f0'},
+  wksp: {name:'Programming in C Workshop', short:'C Workshop', color:'#a8426e', bg:'#fbe4ee'},
+  lang: {name:'Language', short:'Language', color:'#6b6b6b', bg:'#eeeeee'},
+  pe:   {name:'Physical Education / Library', short:'PE/Library', color:'#6b6b6b', bg:'#eeeeee'},
+};
+
+function c(k,t,f,span,label){ return {k,t,f,span:span||1,label}; }
+function lunch(t){ return {k:'lunch',t,span:1}; }
+
+const DAYS = [
+  {name:'Mon', cells:[
+    c('calc','9:00','Dr. Sandhya E'),
+    c('prog','9:50','Ms. Sruthy K S'),
+    c('life','10:50','Fr. Sijo C G'),
+    lunch('11:40'),
+    c('cad','12:30\u20132:10','Mr. Melvinraj C R (practical)',2),
+    c('chem','2:20','Ms. Jasmin Jose'),
+    c('lang','3:10','Fr. Sijo C G'),
+  ]},
+  {name:'Tue', cells:[
+    c('eee','9:00','Ms. Neethu Rose Thomas',1,'EC'),
+    c('wksp','9:50\u201311:40','Ms. Sruthy K S, Ms. Linny Sunny (workshop)',2),
+    lunch('11:40'),
+    c('chem','12:30','Ms. Jasmin Jose'),
+    c('calc','1:20','Dr. Sandhya E'),
+    c('cad','2:20\u20134:00','Mr. Melvinraj C R',2),
+  ]},
+  {name:'Wed', cells:[
+    c('prog','9:00','Ms. Sruthy K S'),
+    c('calc','9:50','Dr. Sandhya E'),
+    c('chem','10:50','Ms. Jasmin Jose'),
+    lunch('11:40'),
+    c('eee','12:30','Ms. Anu Sunny',1,'EE'),
+    c('eee','1:20','Ms. Neethu Rose Thomas',1,'EC'),
+    c('prog','2:20','Ms. Sruthy K S'),
+    c('pe','3:10','Mr. Nidhin Johnson, Mr. Tony C J, Ms. Sruthy K S'),
+  ]},
+  {name:'Thu', cells:[
+    c('eee','9:00','Ms. Anu Sunny',1,'EE'),
+    c('cad','9:50\u201311:40','Mr. Melvinraj C R',2),
+    lunch('11:40'),
+    c('chem','12:30\u20132:10','Ms. Jasmin Jose, Mr. Antony Joseph (practical)',2),
+    c('calc','2:20','Dr. Sandhya E'),
+    c('life','3:10','Mr. Sibin Johny'),
+  ]},
+  {name:'Fri', cells:[
+    c('prog','9:00','Ms. Sruthy K S'),
+    c('chem','9:50','Ms. Jasmin Jose'),
+    c('calc','10:50','Dr. Sandhya E'),
+    c('eee','11:40','Ms. Anu Sunny / Ms. Neethu Rose Thomas',1,'EE/EC'),
+    lunch('12:30'),
+    c('prog','1:50','Ms. Sruthy K S'),
+    c('eee','2:40\u20134:00','Ms. Anu Sunny, Ms. Neethu Rose Thomas (practical)',2,'EE/EC'),
+  ]},
+];
+
+const legendEl = document.getElementById('tt-legend');
+Object.values(SUBJECTS).forEach(s=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.innerHTML = `<span class="dot" style="background:${s.bg};box-shadow:inset 0 0 0 1px ${s.color}"></span>${s.short}`;
+  legendEl.appendChild(chip);
+});
+
+const table = document.getElementById('tt-table');
+
+const colgroup = document.createElement('colgroup');
+colgroup.innerHTML = '<col style="width:8%">' + Array.from({length:8},()=>'<col style="width:11.5%">').join('');
+table.appendChild(colgroup);
+
+const thead = document.createElement('thead');
+const hr = document.createElement('tr');
+hr.innerHTML = '<th class="daycol">Day</th>' + Array.from({length:8},(_,i)=>`<th>${i+1}</th>`).join('');
+thead.appendChild(hr);
+table.appendChild(thead);
+
+const tbody = document.createElement('tbody');
+const detailEl = document.getElementById('tt-detail');
+const dWhen = document.getElementById('tt-dWhen');
+const dSubj = document.getElementById('tt-dSubj');
+const dFac = document.getElementById('tt-dFac');
+
+DAYS.forEach(day=>{
+  const row = document.createElement('tr');
+  const dayTd = document.createElement('td');
+  dayTd.className = 'daycol';
+  dayTd.textContent = day.name;
+  row.appendChild(dayTd);
+
+  day.cells.forEach(cell=>{
+    const td = document.createElement('td');
+    if(cell.span > 1) td.colSpan = cell.span;
+    if(cell.k === 'lunch'){
+      td.innerHTML = `<div class="cell lunch">${cell.t}<br>Lunch</div>`;
+    } else {
+      const s = SUBJECTS[cell.k];
+      td.innerHTML = `<div class="cell" style="background:${s.bg};color:${s.color}">
+        <span class="time">${cell.t}</span><span class="subj">${cell.label || s.short}</span></div>`;
+      td.querySelector('.cell').addEventListener('click', function(){
+        document.querySelectorAll('.cell.selected').forEach(el=>el.classList.remove('selected'));
+        this.classList.add('selected');
+        dWhen.textContent = `${day.name} \u00b7 ${cell.t}`;
+        dSubj.textContent = cell.label ? `${s.name} \u2014 ${cell.label}` : s.name;
+        dFac.textContent = cell.f;
+        detailEl.classList.add('open');
+      });
+    }
+    row.appendChild(td);
+  });
+  tbody.appendChild(row);
+});
+table.appendChild(tbody);
+})();
+</script>
+</body>
+</html>
