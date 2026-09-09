@@ -44,6 +44,27 @@
     .cell .subj{font-size:11.5px;}
   }
 
+  /* ---- calendar layout: main + notes side panel ---- */
+  .calLayout{display:block;}
+  .calMain{width:100%;}
+  .notesPanel{width:100%;}
+
+  @media (orientation:landscape) and (min-width:700px){
+    .calLayout{display:flex; align-items:flex-start; gap:18px;}
+    .calMain{flex:0 0 340px; max-width:340px;}
+    .notesPanel{flex:1 1 auto; min-width:200px; padding-top:2px;}
+    .toggleBtn{display:none;}
+    .notes{
+      max-height:none !important; opacity:1 !important; overflow:visible;
+      padding:4px 2px 0; font-size:12.5px;
+    }
+    .gridBody{padding:8px 10px 10px;}
+    .weekday-row{margin-bottom:4px;}
+    .nav{padding:7px 10px;}
+    .nav .label{font-size:14px;}
+    .day{aspect-ratio:1/0.78; font-size:11px;}
+  }
+
   /* switcher */
   .switcher{
     display:flex; gap:3px; background:var(--line); padding:3px;
@@ -172,42 +193,12 @@
   </header>
 
   <div class="switcher">
-    <button class="switchBtn active" data-target="calendarView">Calendar</button>
-    <button class="switchBtn" data-target="timetableView">Timetable</button>
-  </div>
-
-  <!-- ================= CALENDAR VIEW ================= -->
-  <div id="calendarView">
-    <div class="legend" id="cal-legend"></div>
-
-    <div class="card" id="cal-card">
-      <div class="nav">
-        <button id="cal-prev" aria-label="Previous month">&#8249;</button>
-        <div class="label" id="cal-monthLabel"></div>
-        <button id="cal-next" aria-label="Next month">&#8250;</button>
-      </div>
-      <div class="gridBody">
-        <div class="weekday-row">
-          <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-        </div>
-        <div class="gridWrap" id="cal-gridWrap">
-          <div class="grid" id="cal-grid"></div>
-          <div class="detail" id="cal-detail">
-            <p class="d-date" id="cal-dDate"></p>
-            <p class="d-label" id="cal-dLabel"></p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <button class="toggleBtn" id="cal-toggleNotes" aria-label="Show details">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-    </button>
-    <div class="notes" id="cal-notes"></div>
+    <button class="switchBtn active" data-target="timetableView">Timetable</button>
+    <button class="switchBtn" data-target="calendarView">Calendar</button>
   </div>
 
   <!-- ================= TIMETABLE VIEW ================= -->
-  <div id="timetableView" style="display:none">
+  <div id="timetableView">
     <div class="legend" id="tt-legend"></div>
 
     <div class="card">
@@ -220,6 +211,42 @@
       <p class="d-when" id="tt-dWhen"></p>
       <p class="d-subj" id="tt-dSubj"></p>
       <p class="d-fac" id="tt-dFac"></p>
+    </div>
+  </div>
+
+  <!-- ================= CALENDAR VIEW ================= -->
+  <div id="calendarView" style="display:none">
+    <div class="legend" id="cal-legend"></div>
+
+    <div class="calLayout">
+      <div class="calMain">
+        <div class="card" id="cal-card">
+          <div class="nav">
+            <button id="cal-prev" aria-label="Previous month">&#8249;</button>
+            <div class="label" id="cal-monthLabel"></div>
+            <button id="cal-next" aria-label="Next month">&#8250;</button>
+          </div>
+          <div class="gridBody">
+            <div class="weekday-row">
+              <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+            </div>
+            <div class="gridWrap" id="cal-gridWrap">
+              <div class="grid" id="cal-grid"></div>
+              <div class="detail" id="cal-detail">
+                <p class="d-date" id="cal-dDate"></p>
+                <p class="d-label" id="cal-dLabel"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notesPanel">
+        <button class="toggleBtn" id="cal-toggleNotes" aria-label="Show details">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="notes" id="cal-notes"></div>
+      </div>
     </div>
   </div>
 </div>
