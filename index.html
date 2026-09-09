@@ -44,26 +44,9 @@
     .cell .subj{font-size:11.5px;}
   }
 
-  /* ---- calendar layout: main + notes side panel ---- */
   .calLayout{display:block;}
   .calMain{width:100%;}
   .notesPanel{width:100%;}
-
-  @media (orientation:landscape) and (min-width:700px){
-    .calLayout{display:flex; align-items:flex-start; gap:18px;}
-    .calMain{flex:0 0 340px; max-width:340px;}
-    .notesPanel{flex:1 1 auto; min-width:200px; padding-top:2px;}
-    .toggleBtn{display:none;}
-    .notes{
-      max-height:none !important; opacity:1 !important; overflow:visible;
-      padding:4px 2px 0; font-size:12.5px;
-    }
-    .gridBody{padding:8px 10px 10px;}
-    .weekday-row{margin-bottom:4px;}
-    .nav{padding:7px 10px;}
-    .nav .label{font-size:14px;}
-    .day{aspect-ratio:1/0.78; font-size:11px;}
-  }
 
   /* switcher */
   .switcher{
@@ -183,6 +166,33 @@
   .cell .time{font-size:8.5px; color:var(--muted); font-style:italic; margin-bottom:2px;}
   .cell .subj{font-size:10.5px; font-weight:600; line-height:1.15;}
   .cell.selected{outline:2px solid var(--accent); outline-offset:-2px;}
+
+  /* ---- calendar layout: notes as a side panel in landscape ---- */
+  @media (orientation:landscape) and (min-width:700px){
+    .calLayout{
+      display:grid;
+      grid-template-columns:340px 1fr;
+      grid-template-rows:auto 1fr;
+      grid-template-areas:"cal legend" "cal notes";
+      column-gap:18px; row-gap:8px; align-items:start;
+    }
+    .calMain{grid-area:cal; width:auto;}
+    .notesPanel{grid-area:notes; width:auto;}
+    .calLayout > .legend{
+      grid-area:legend; margin-bottom:0;
+      flex-wrap:wrap; row-gap:6px; overflow-x:visible;
+    }
+    .toggleBtn{display:none;}
+    .notes{
+      max-height:none; opacity:1; overflow:visible;
+      padding:4px 2px 0; font-size:12.5px;
+    }
+    .gridBody{padding:8px 10px 10px;}
+    .weekday-row{margin-bottom:4px;}
+    .nav{padding:7px 10px;}
+    .nav .label{font-size:14px;}
+    .day{aspect-ratio:1/0.78; font-size:11px;}
+  }
 </style>
 </head>
 <body>
@@ -216,9 +226,9 @@
 
   <!-- ================= CALENDAR VIEW ================= -->
   <div id="calendarView" style="display:none">
-    <div class="legend" id="cal-legend"></div>
-
     <div class="calLayout">
+      <div class="legend" id="cal-legend"></div>
+
       <div class="calMain">
         <div class="card" id="cal-card">
           <div class="nav">
